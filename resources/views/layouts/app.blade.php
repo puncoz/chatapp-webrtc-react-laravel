@@ -11,12 +11,14 @@
 	<title>{{ config('app.name', 'Laravel') }}</title>
 	
 	<!-- Scripts -->
-	<script>
-        window.user = {
-            id: {{ auth()->user()->id }},
-            name: '{{ auth()->user()->name }}',
-        };
-	</script>
+	@if(auth()->user())
+		<script>
+            window.user = {
+                id: {{ auth()->user()->id }},
+                name: '{{ auth()->user()->name }}',
+            };
+		</script>
+	@endif
 	<script src="{{ asset('js/app.js') }}" defer></script>
 	
 	<!-- Fonts -->

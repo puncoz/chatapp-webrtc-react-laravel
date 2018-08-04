@@ -3,6 +3,9 @@ import MediaHandler       from "./../MediaHandler";
 import Pusher             from "pusher-js";
 import Peer               from "simple-peer";
 
+const APP_KEY = process.env.MIX_PUSHER_APP_KEY;
+const APP_CLUSTER = process.env.MIX_PUSHER_APP_CLUSTER;
+
 class App extends Component {
     constructor() {
         super();
@@ -41,13 +44,15 @@ class App extends Component {
     }
 
     setupPusher() {
+        // Pusher.logToConsole = true;
+
         this.pusher = new Pusher(APP_KEY, {
             authEndpoint: "/pusher/auth",
-            cluster: "ap2",
+            cluster: APP_CLUSTER,
             auth: {
                 params: this.user.id,
-                header: {
-                    "X-CSRF-Token": window.csrfToken,
+                headers: {
+                    "X-CSRF-Token": window.csrfToken.content,
                 },
             },
         });
@@ -55,7 +60,7 @@ class App extends Component {
         this.channel = this.pusher.subscribe("presence-video-channel");
 
         this.channel.bind(`client-signal-${this.user.id}`, signal => {
-            let peer = this.peers[signa.userId];
+            let peer = this.peers[signal.userId];
 
             // if peer is not already exists, its an incoming call.
             if (peer === undefined) {
@@ -65,6 +70,8 @@ class App extends Component {
 
                 peer = this.startPeer(signal.userId, false);
             }
+
+            peer.signal(signal.data);
         });
     }
 
@@ -75,7 +82,7 @@ class App extends Component {
             trickle: false,
         });
 
-        peer.on("signal", data => {
+        peer.on("signal", (data) => {
             this.channel.trigger(`client-signal-${peerId}`, {
                 type: "signal",
                 userId: this.user.id,
@@ -83,7 +90,7 @@ class App extends Component {
             });
         });
 
-        peer.on("stream", stream => {
+        peer.on("stream", (stream) => {
             try {
                 this.userVideo.srcObject = stream;
             } catch (e) {
@@ -101,6 +108,8 @@ class App extends Component {
 
             this.peers[peerId] = undefined;
         });
+
+        return peer;
     }
 
     callTo(userId) {
@@ -116,9 +125,9 @@ class App extends Component {
                             <div className="card-header">My Video</div>
 
                             <div className="card-body">
-                                {[1, 2, 3, 4].map(userId => (
-                                    <button onClick={() => this.callTo(userId)}>Call User {userId}</button>
-                                ))}
+                                {[1, 2, 3, 4].map(userId => {
+                                    return this.user.id !== userId ? <button key={userId} onClick={() => this.callTo(userId)}>Call User {userId}</button> : null;
+                                })}
 
                                 <div className="video-container">
                                     <video className="my-video" ref={ref => {this.myVideo = ref;}}/>
